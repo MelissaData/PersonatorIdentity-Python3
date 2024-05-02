@@ -30,7 +30,7 @@ And return information such as:
 ## Tested Environments
 - Windows 10 64-bit Python 3.10.4, Powershell 5.1
 - Ubuntu Linux 20.04.04 LTS 64-bit Python 3.10.4
-- Personator Identity Cloud API Version 7.2.0.1214
+- Personator Identity Cloud API Version 7.2.0.1219
 
 ## Getting Started
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
