@@ -1,7 +1,33 @@
 #!/bin/bash
 
-# Name:    PersonatorIdentityCloudAPI
-# Purpose: Execute the PersonatorIdentityCloudAPI program
+# Runs the Melissa Personator Identity Cloud API Python 3 sample.
+#
+# This script runs PersonatorIdentityPython3.py with python3, passing along the license
+# and (if supplied) the action and lookup fields.
+#
+# Overall flow:
+#   1. Parse the command-line options below.
+#   2. Resolve the license (--license, then a prompt, then the MD_LICENSE environment variable).
+#   3. Run PersonatorIdentityPython3.py: with the action/lookup fields if any was supplied,
+#      otherwise with only the license (the Python program prompts for each field).
+#
+# Options (each takes a value):
+#   --action               Action to request: check, verify or screen.
+#   --fullname             Full name to test.
+#   --addressline1         Street address to test.
+#   --locality             Locality (city) to test.
+#   --administrativearea   Administrative area (state/province) to test.
+#   --postal               Postal code to test.
+#   --country              Country to test.
+#   --license              License string. If omitted, the script prompts for it; if the prompt
+#                          is left blank, it falls back to MD_LICENSE. Running without --license
+#                          always prompts, even when MD_LICENSE is set.
+#
+# PersonatorIdentityPython3.py is found relative to the current directory, so run the script from its own folder.
+#
+# Examples:
+#   ./PersonatorIdentityPython3.sh --license "your-license"
+#   ./PersonatorIdentityPython3.sh --action "check" --fullname "Raymond Melissa" --addressline1 "22382 Avenida Empresa" --locality "Rancho Santa Margarita" --administrativearea "CA" --postal "92688" --country "United States" --license "your-license"
 
 ######################### Constants ##########################
 
@@ -19,6 +45,8 @@ postal=""
 country=""
 license=""
 
+# Read each --flag and its value. A flag with no value, or whose value starts with
+# "-", is an error. Unrecognized options are ignored.
 while [ $# -gt 0 ] ; do
   case $1 in
     --action) 
@@ -128,9 +156,12 @@ then
 fi
 
 # Run project
+# No action/lookup fields supplied -> run with only the license (the program prompts);
+# otherwise pass all of them through. Unsupplied fields arrive as empty strings and the
+# program prompts for them.
 if [ -z "$action" ] && [ -z "$fullname" ] && [ -z "$addressline1" ] && [ -z "$locality" ] && [ -z "$administrativearea" ] && [ -z "$postal" ] && [ -z "$country" ];
 then
-    python3 PersonatorIdentityPython3.py --license $license 
+    python3 PersonatorIdentityPython3.py --license "$license"
 else
     python3 PersonatorIdentityPython3.py \
 		--license "$license" \
@@ -140,6 +171,6 @@ else
 		--locality "$locality" \
 		--administrativearea "$administrativearea" \
 		--postal "$postal" \
-		--country "$country" 
+		--country "$country"
 fi
 

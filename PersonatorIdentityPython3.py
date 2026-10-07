@@ -1,3 +1,22 @@
+"""
+Personator Identity verifies a person's contact record worldwide (name and address) and
+returns name, address, email, phone and identity information. The requested action
+(check, verify or screen) controls what the service does with the record.
+
+High-level flow of this sample:
+  1. ARGS    - main reads any --flag values off the command line with argparse.
+  2. INPUT   - call_api fills in whatever wasn't supplied via interactive prompts.
+  3. REQUEST - call_api builds the REST query string (license + input fields).
+  4. CALL    - get_contents issues the GET request and pretty-prints the JSON response.
+
+This sample is a thin HTTP client: it builds a query string, sends a GET request to
+the Personator Identity Cloud API, and prints the JSON response.
+
+Reference:
+  - Documentation: https://docs.melissa.com/cloud-api/personator-identity/personator-identity-index.html
+  - Release notes: https://releasenotes.melissa.com/cloud-api/personator-identity/
+  - Result codes:  https://docs.melissa.com/melissa/result-codes/result-codes-index.html
+"""
 
 import json
 import requests
@@ -5,6 +24,15 @@ import argparse
 import urllib.parse
 
 def main():
+  """
+  Entry point. Reads the optional command-line arguments, then hands control to
+  call_api, which performs the actual request/response cycle.
+
+  Recognized flags (each followed by its value, e.g. --action "check"):
+  --license/-l, --action, --fullname, --addressline1, --locality, --administrativearea,
+  --postal, --country.
+  Any flag not supplied is None, and call_api prompts for it interactively.
+  """
   base_service_url = "https://globalpersonator.melissadata.net/"
   service_endpoint = "v1/doContactVerify"
 
@@ -34,11 +62,22 @@ def main():
   postal = args.postal
   country = args.country
 
+  # Run the lookup with whatever values were passed on the command line.
   call_api(base_service_url, service_endpoint, license, action, fullname, addressline1, locality, administrativearea, postal, country)
 
 def get_contents(base_service_url, request_query):
+    """
+    Issues the GET request against the Personator Identity endpoint and pretty-prints
+    the API call and the JSON response to the console.
+
+    Args:
+        base_service_url: The Personator Identity Cloud API base URL.
+        request_query: The endpoint path plus query string built by call_api.
+    """
     url = urllib.parse.urljoin(base_service_url, request_query)
     response = requests.get(url)
+
+    # Re-serialize with indentation so the raw response is easier to read.
     obj = json.loads(response.text)
     pretty_response = json.dumps(obj, indent=4)
 
@@ -54,6 +93,26 @@ def get_contents(base_service_url, request_query):
     print(pretty_response)
 
 def call_api(base_service_url, service_endpoint, license, action, fullname, addressline1, locality, administrativearea, postal, country):
+    """
+    Drives the interactive/CLI loop: gathers the required lookup fields, builds and
+    submits the REST query, prints the result, and optionally repeats for another record.
+
+    It runs a single pass and exits only when every lookup field (including the action)
+    was supplied on the command line. Otherwise it loops, asking for a new record each
+    pass until the user answers "N".
+
+    Args:
+        base_service_url: The Personator Identity Cloud API base URL.
+        service_endpoint: The specific Personator Identity endpoint path to call.
+        license: The Melissa license string sent with every request.
+        action: The action to request (e.g. check, verify, screen), or None to prompt for it.
+        fullname: A full name to test, or None to prompt for it.
+        addressline1: A street address to test, or None to prompt for it.
+        locality: A locality (city) to test, or None to prompt for it.
+        administrativearea: An administrative area (state/province) to test, or None to prompt for it.
+        postal: A postal code to test, or None to prompt for it.
+        country: A country to test, or None to prompt for it.
+    """
     print("\n=============== WELCOME TO MELISSA PERSONATOR IDENTITY CLOUD API ===============\n")
 
     should_continue_running = True
@@ -65,6 +124,9 @@ def call_api(base_service_url, service_endpoint, license, action, fullname, addr
         input_administrativearea = ""
         input_postal = ""
         input_country = ""
+
+        # No lookup values (including the action) were supplied via command line, so
+        # prompt for every field.
         if not action and not fullname and not addressline1 and not locality and not administrativearea and not postal and not country:
             print("\nFill in each value to see results")
             input_action = input("Action: ")
@@ -75,6 +137,7 @@ def call_api(base_service_url, service_endpoint, license, action, fullname, addr
             input_postal = input("Postal: ")
             input_country = input("Country: ")
         else:
+            # At least one lookup field was supplied via command line; use those values as-is.
             input_action = action
             input_fullname = fullname
             input_addressline1 = addressline1
@@ -83,12 +146,13 @@ def call_api(base_service_url, service_endpoint, license, action, fullname, addr
             input_postal = postal
             input_country = country
 
+        # Prompt individually for any still-missing required field.
         while not input_action or not input_fullname or not input_addressline1 or not input_locality or not input_administrativearea or not input_postal or not input_country:
             print("\nFill in each value to see results")
             if not input_action:
-                input_fullname = input("\nAction: ")
+                input_action = input("\nAction: ")
             if not input_fullname:
-                input_fullname = input("\nFulll Name: ")
+                input_fullname = input("\nFull Name: ")
             if not input_addressline1:
                 input_addressline1 = input("\nAddressline1: ")
             if not input_locality:
@@ -100,6 +164,8 @@ def call_api(base_service_url, service_endpoint, license, action, fullname, addr
             if not input_country:
                 input_country = input("\nCountry: ")
 
+        # Map input fields to the API's expected query parameter names and
+        # request a JSON response.
         inputs = {
             "format": "json",
             "act": input_action,
@@ -149,6 +215,8 @@ def call_api(base_service_url, service_endpoint, license, action, fullname, addr
 
         is_valid = False;
 
+        # If every lookup field came from the command line, treat this as a one-shot
+        # run rather than looping for additional records.
         if (action is not None) and (fullname is not None) and (addressline1 is not None) and (locality is not None) and (administrativearea is not None) and (postal is not None) and (country is not None):
             concat = action + fullname + addressline1 + locality + administrativearea + postal + country
         else:
@@ -158,6 +226,8 @@ def call_api(base_service_url, service_endpoint, license, action, fullname, addr
             is_valid = True
             should_continue_running = False
 
+        # Otherwise ask whether to test another record. Keep prompting until we get a
+        # valid Y/N. "N" ends the program; "Y" falls through to another pass.
         while not is_valid:
             test_another_response = input("\nTest another record? (Y/N)")
             if test_another_response != '':
